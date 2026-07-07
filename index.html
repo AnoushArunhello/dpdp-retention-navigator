@@ -1,0 +1,992 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>DPDP Retention Navigator</title>
+<link rel="preconnect" href="https://api.fontshare.com" />
+<link href="https://api.fontshare.com/v2/css?f[]=gambarino@400,500,600,700&f[]=general-sans@400,500,600,700&f[]=jetbrains-mono@400,500&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    /* deep blue system */
+    --ink:#141634;
+    --navy:#1E2160;
+    --navy-2:#2B2F77;
+    --navy-3:#3A3F94;
+    --canvas:#EEF0F8;
+    --canvas-line:#DCE0F0;
+    --card:#FFFFFF;
+    --edge:#B9BEE0;
+    --edge-strong:#6D74C4;
+    --text:#20233F;
+    --muted:#6B6F91;
+    --faint:#9DA1BE;
+    --line:#E7E9F4;
+    /* regime accent geometry */
+    --c-baseline:#3B4CCA;   /* DPDP baseline - blue diamond */
+    --c-request:#C0483B;    /* erasure / withdrawal - red */
+    --c-sectoral:#E0A21B;   /* sectoral overlay - amber */
+    --c-log:#2E9E6B;        /* logs - green */
+    --c-consent:#7B49C4;    /* consent manager - violet */
+    --c-exempt:#4B5163;     /* exempt / state - slate */
+    --shadow:0 1px 2px rgba(20,22,52,.06), 0 8px 24px rgba(20,22,52,.08);
+    --shadow-lg:0 2px 4px rgba(20,22,52,.08), 0 20px 48px rgba(20,22,52,.16);
+    --radius:14px;
+    --font-display:"Gambarino", Georgia, serif;
+    --font-body:"General Sans", "Inter", system-ui, sans-serif;
+    --font-mono:"JetBrains Mono", ui-monospace, monospace;
+  }
+
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    font-family:var(--font-body);
+    color:var(--text);
+    background:var(--navy);
+    -webkit-font-smoothing:antialiased;
+    overflow:hidden;
+  }
+  ::selection{background:#C9CEF6}
+
+  /* ---------- APP SHELL ---------- */
+  .app{
+    display:grid;
+    grid-template-columns:320px 1fr;
+    grid-template-rows:56px 1fr;
+    height:100vh;
+    grid-template-areas:
+      "brand topbar"
+      "side  canvaswrap";
+  }
+
+  /* ---------- BRAND CORNER ---------- */
+  .brand{
+    grid-area:brand;
+    background:var(--navy);
+    display:flex;align-items:center;gap:11px;
+    padding:0 20px;
+    border-right:1px solid rgba(255,255,255,.07);
+    border-bottom:1px solid rgba(255,255,255,.07);
+  }
+  .brand .mark{
+    width:30px;height:30px;border-radius:8px;
+    background:linear-gradient(135deg,#5661D6,#3A3F94);
+    display:grid;place-items:center;
+    font-family:var(--font-display);font-weight:700;color:#fff;font-size:17px;
+    box-shadow:inset 0 0 0 1px rgba(255,255,255,.14);
+  }
+  .brand .wm{color:#fff;line-height:1.05}
+  .brand .wm b{font-family:var(--font-display);font-weight:600;font-size:15px;letter-spacing:.2px;display:block}
+  .brand .wm span{font-size:10.5px;color:#A9AEDC;letter-spacing:.14em;text-transform:uppercase}
+
+  /* ---------- TOPBAR ---------- */
+  .topbar{
+    grid-area:topbar;
+    background:var(--navy);
+    display:flex;align-items:center;
+    padding:0 18px 0 6px;
+    border-bottom:1px solid rgba(255,255,255,.07);
+    gap:6px;
+  }
+  .tabs{display:flex;align-items:stretch;height:100%;gap:2px}
+  .tab{
+    display:flex;align-items:center;gap:8px;
+    padding:0 16px;height:100%;
+    color:#A9AEDC;font-size:13px;font-weight:500;
+    cursor:pointer;border:none;background:none;
+    border-bottom:2px solid transparent;
+    transition:color .15s, background .15s;
+  }
+  .tab .dot{width:7px;height:7px;border-radius:2px;background:currentColor;opacity:.8}
+  .tab:hover{color:#DFE2F6}
+  .tab.active{
+    color:#fff;background:var(--canvas);
+    border-radius:9px 9px 0 0;
+    border-bottom:2px solid transparent;
+    position:relative;top:1px;
+  }
+  .tab.active .dot{background:var(--c-baseline);opacity:1}
+  .tab.g2.active .dot{background:var(--c-consent)}
+  .topbar .spacer{flex:1}
+  .searchtop{
+    display:flex;align-items:center;gap:8px;
+    background:rgba(255,255,255,.08);
+    border:1px solid rgba(255,255,255,.09);
+    border-radius:9px;padding:7px 12px;width:230px;
+    color:#C4C8EC;
+  }
+  .searchtop input{
+    background:none;border:none;outline:none;color:#fff;
+    font-family:var(--font-body);font-size:12.5px;width:100%;
+  }
+  .searchtop input::placeholder{color:#8388BC}
+  .searchtop svg{flex:none;opacity:.7}
+  .iconbtn{
+    width:34px;height:34px;border-radius:9px;border:1px solid rgba(255,255,255,.09);
+    background:rgba(255,255,255,.05);color:#C4C8EC;cursor:pointer;
+    display:grid;place-items:center;transition:background .15s;
+  }
+  .iconbtn:hover{background:rgba(255,255,255,.12)}
+
+  /* ---------- SIDEBAR ---------- */
+  .sidebar{
+    grid-area:side;
+    background:var(--navy);
+    color:#DDE0F4;
+    display:flex;flex-direction:column;
+    border-right:1px solid rgba(255,255,255,.07);
+    overflow:hidden;
+  }
+  .side-head{padding:18px 20px 12px}
+  .side-head h2{
+    font-family:var(--font-display);font-weight:500;
+    font-size:15px;color:#fff;letter-spacing:.2px;
+    display:flex;align-items:center;justify-content:space-between;
+  }
+  .side-head p{font-size:11.5px;color:#9297C8;margin-top:4px;line-height:1.5}
+  .side-search{
+    margin:4px 16px 8px;
+    display:flex;align-items:center;gap:8px;
+    background:rgba(255,255,255,.06);
+    border:1px solid rgba(255,255,255,.08);
+    border-radius:10px;padding:9px 12px;color:#A2A7D4;
+  }
+  .side-search input{background:none;border:none;outline:none;color:#fff;font-family:var(--font-body);font-size:12.5px;width:100%}
+  .side-search input::placeholder{color:#8388BC}
+
+  .scroll{overflow-y:auto;flex:1;padding:4px 10px 24px}
+  .scroll::-webkit-scrollbar{width:9px}
+  .scroll::-webkit-scrollbar-thumb{background:rgba(255,255,255,.12);border-radius:9px;border:2px solid var(--navy)}
+
+  .group{margin-top:10px}
+  .group-label{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:8px 10px;cursor:pointer;user-select:none;
+    color:#8E93C4;font-size:10.5px;font-weight:600;
+    letter-spacing:.14em;text-transform:uppercase;
+  }
+  .group-label .chev{transition:transform .2s;opacity:.7}
+  .group.collapsed .chev{transform:rotate(-90deg)}
+  .group.collapsed .items{display:none}
+
+  .node-item{
+    display:flex;align-items:flex-start;gap:11px;
+    padding:10px 11px;margin:3px 2px;border-radius:11px;
+    cursor:pointer;transition:background .13s;
+    border:1px solid transparent;
+  }
+  .node-item:hover{background:rgba(255,255,255,.06)}
+  .node-item.active{background:rgba(255,255,255,.11);border-color:rgba(255,255,255,.14)}
+  .node-item .glyph{flex:none;margin-top:1px}
+  .node-item .lbl b{display:block;font-size:12.5px;font-weight:600;color:#fff;line-height:1.25}
+  .node-item .lbl span{display:block;font-size:11px;color:#9A9FCB;line-height:1.4;margin-top:2px}
+  .node-item .star{margin-left:auto;color:#5A5FA0;flex:none}
+  .node-item.active .star{color:var(--c-sectoral)}
+
+  /* geometric glyphs (diamond/pentagon/hexagon like the reference) */
+  .glyph{width:26px;height:26px;position:relative;display:grid;place-items:center}
+  .glyph svg{width:26px;height:26px}
+
+  /* ---------- CANVAS ---------- */
+  .canvaswrap{grid-area:canvaswrap;position:relative;background:var(--canvas);overflow:hidden}
+  .canvas-toolbar{
+    position:absolute;top:14px;left:16px;z-index:20;
+    display:flex;align-items:center;gap:5px;
+    background:#fff;border:1px solid var(--line);
+    border-radius:11px;padding:5px;box-shadow:var(--shadow);
+  }
+  .canvas-toolbar button{
+    width:30px;height:30px;border-radius:8px;border:none;background:none;
+    color:var(--muted);cursor:pointer;display:grid;place-items:center;transition:.13s;
+  }
+  .canvas-toolbar button:hover{background:var(--canvas);color:var(--navy-2)}
+  .canvas-toolbar .div{width:1px;height:20px;background:var(--line);margin:0 3px}
+
+  .canvas{
+    position:absolute;inset:0;
+    background-image:radial-gradient(var(--canvas-line) 1.3px, transparent 1.3px);
+    background-size:26px 26px;
+    overflow:auto;
+  }
+  .canvas::-webkit-scrollbar{width:11px;height:11px}
+  .canvas::-webkit-scrollbar-thumb{background:#CFD4EC;border-radius:11px;border:3px solid var(--canvas)}
+  .stage{position:relative;min-width:1500px;min-height:900px;padding:70px 90px 120px}
+
+  /* scenario title card floats top */
+  .flow-head{
+    max-width:720px;margin:0 auto 6px;text-align:center;
+    animation:pop .4s cubic-bezier(.2,.9,.3,1.2);
+  }
+  .flow-head .kicker{
+    display:inline-flex;align-items:center;gap:8px;
+    font-family:var(--font-mono);font-size:11px;letter-spacing:.08em;
+    color:var(--muted);text-transform:uppercase;
+    background:#fff;border:1px solid var(--line);border-radius:99px;
+    padding:5px 13px;margin-bottom:14px;box-shadow:var(--shadow);
+  }
+  .flow-head h1{
+    font-family:var(--font-display);font-weight:600;
+    font-size:30px;line-height:1.12;color:var(--ink);letter-spacing:.2px;
+  }
+  .flow-head .cite{
+    font-family:var(--font-mono);font-size:12px;color:var(--edge-strong);
+    margin-top:10px;
+  }
+
+  /* the flow row of connected node cards */
+  .flow-canvas{position:relative;margin-top:34px}
+  .flow-row{
+    display:flex;align-items:stretch;justify-content:center;
+    gap:54px;flex-wrap:wrap;position:relative;
+  }
+  .ncard{
+    width:236px;background:var(--card);border-radius:var(--radius);
+    box-shadow:var(--shadow);border:1px solid var(--line);
+    position:relative;overflow:hidden;
+    animation:pop .45s cubic-bezier(.2,.9,.3,1.2) backwards;
+  }
+  .ncard::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--acc,var(--c-baseline))}
+  .ncard .nhead{
+    display:flex;align-items:center;gap:11px;padding:15px 16px 12px;
+  }
+  .ncard .nhead .g{flex:none}
+  .ncard .nhead .t b{display:block;font-size:13px;font-weight:600;color:var(--ink);line-height:1.2}
+  .ncard .nhead .t span{display:block;font-size:10.5px;color:var(--faint);font-family:var(--font-mono);letter-spacing:.04em;margin-top:2px;text-transform:uppercase}
+  .ncard .nbody{padding:0 16px 16px;font-size:12.5px;line-height:1.55;color:var(--text)}
+  .ncard .nbody .big{
+    font-family:var(--font-display);font-weight:600;font-size:22px;
+    color:var(--ink);display:block;margin:2px 0 6px;line-height:1;
+  }
+  .ncard .nbody .sub{color:var(--muted);font-size:12px;line-height:1.5}
+  .port{position:absolute;top:50%;width:11px;height:11px;border-radius:50%;background:#fff;border:2.5px solid var(--edge-strong);transform:translateY(-50%);z-index:3}
+  .port.in{left:-6px}
+  .port.out{right:-6px}
+
+  /* connectors between cards, drawn as SVG overlay */
+  .edges{position:absolute;inset:0;pointer-events:none;z-index:1;overflow:visible}
+  .edges path{fill:none;stroke:var(--edge);stroke-width:2;stroke-dasharray:5 6;opacity:.9}
+
+  /* overlay + resolver panels shown BELOW the flow */
+  .sectorwrap{max-width:1120px;margin:44px auto 0;display:grid;grid-template-columns:1fr 1fr;gap:22px}
+  @media(max-width:1100px){.sectorwrap{grid-template-columns:1fr}}
+  .panel{
+    background:#fff;border:1px solid var(--line);border-radius:var(--radius);
+    box-shadow:var(--shadow);overflow:hidden;
+    animation:pop .5s cubic-bezier(.2,.9,.3,1.2) backwards;
+  }
+  .panel .phead{
+    display:flex;align-items:center;gap:11px;padding:15px 18px;
+    border-bottom:1px solid var(--line);
+  }
+  .panel .phead .g{flex:none}
+  .panel .phead b{font-family:var(--font-display);font-weight:600;font-size:15px;color:var(--ink)}
+  .panel .phead .tag{margin-left:auto;font-family:var(--font-mono);font-size:10.5px;color:var(--muted);background:var(--canvas);border:1px solid var(--line);padding:4px 9px;border-radius:99px}
+  .panel .pbody{padding:6px 18px 16px}
+  .ovl{
+    display:flex;align-items:baseline;gap:12px;
+    padding:12px 0;border-bottom:1px solid var(--line);
+  }
+  .ovl:last-child{border-bottom:none}
+  .ovl .name{font-weight:600;font-size:12.5px;color:var(--ink);min-width:96px}
+  .ovl .per{font-family:var(--font-mono);font-weight:500;font-size:13px;color:var(--c-sectoral);white-space:nowrap}
+  .ovl .desc{font-size:12px;color:var(--muted);line-height:1.5;margin-left:auto;text-align:right;max-width:190px}
+
+  .empty-flow{
+    max-width:520px;margin:120px auto 0;text-align:center;color:var(--muted);
+  }
+  .empty-flow .ico{width:64px;height:64px;margin:0 auto 20px;opacity:.5}
+  .empty-flow h3{font-family:var(--font-display);font-weight:600;font-size:22px;color:var(--ink);margin-bottom:8px}
+  .empty-flow p{font-size:13.5px;line-height:1.6}
+
+  /* ---------- INTERPLAY RESOLVER (tab 2) ---------- */
+  .resolver{max-width:960px;margin:0 auto;padding-top:16px}
+  .res-head{text-align:center;margin-bottom:8px}
+  .res-head .kicker{
+    display:inline-flex;align-items:center;gap:8px;
+    font-family:var(--font-mono);font-size:11px;letter-spacing:.08em;
+    color:var(--muted);text-transform:uppercase;
+    background:#fff;border:1px solid var(--line);border-radius:99px;
+    padding:5px 13px;margin-bottom:14px;box-shadow:var(--shadow);
+  }
+  .res-head h1{font-family:var(--font-display);font-weight:600;font-size:30px;color:var(--ink);letter-spacing:.2px}
+  .res-head p{font-size:13.5px;color:var(--muted);margin-top:10px;line-height:1.6;max-width:560px;margin-inline:auto}
+
+  .chip-rail{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin:26px 0 8px}
+  .rchip{
+    display:flex;align-items:center;gap:9px;
+    background:#fff;border:1.5px solid var(--line);border-radius:12px;
+    padding:11px 15px;cursor:pointer;transition:.14s;box-shadow:var(--shadow);
+    text-align:left;
+  }
+  .rchip:hover{border-color:var(--edge-strong);transform:translateY(-1px)}
+  .rchip.sel{border-color:var(--acc);box-shadow:0 0 0 3px color-mix(in srgb,var(--acc) 20%,transparent),var(--shadow)}
+  .rchip .k{
+    width:26px;height:26px;border-radius:7px;flex:none;
+    display:grid;place-items:center;color:#fff;font-family:var(--font-display);font-weight:700;font-size:13px;
+    background:var(--acc);
+  }
+  .rchip .rt b{display:block;font-size:12.5px;color:var(--ink);font-weight:600;line-height:1.2}
+  .rchip .rt span{display:block;font-size:11px;color:var(--muted);line-height:1.35;margin-top:2px;max-width:170px}
+
+  .res-note{text-align:center;font-size:12.5px;color:var(--faint);margin:6px 0 22px;font-family:var(--font-mono)}
+
+  .verdict{
+    background:#fff;border:1px solid var(--line);border-radius:18px;
+    box-shadow:var(--shadow-lg);overflow:hidden;
+    animation:pop .45s cubic-bezier(.2,.9,.3,1.2);
+  }
+  .verdict .vhead{
+    display:flex;align-items:center;gap:14px;padding:20px 24px;
+    background:linear-gradient(180deg,#F7F8FE,#fff);
+    border-bottom:1px solid var(--line);
+  }
+  .vpair{display:flex;align-items:center;gap:9px}
+  .vpair .k{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;color:#fff;font-family:var(--font-display);font-weight:700;font-size:14px}
+  .vpair .x{color:var(--faint);font-size:15px;font-weight:600}
+  .verdict .rule{
+    margin-left:auto;font-family:var(--font-display);font-weight:600;font-size:16px;
+    color:#fff;background:var(--navy-2);padding:8px 16px;border-radius:99px;letter-spacing:.2px;
+  }
+  .verdict .vbody{padding:22px 26px 24px}
+  .verdict .governs{
+    font-family:var(--font-mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;
+    color:var(--edge-strong);margin-bottom:10px;
+  }
+  .verdict .practice{font-size:15px;line-height:1.65;color:var(--text)}
+  .verdict .practice b{color:var(--ink);font-weight:600}
+
+  .res-empty{
+    text-align:center;color:var(--muted);margin-top:40px;
+    background:#fff;border:1px dashed var(--edge);border-radius:16px;padding:40px 24px;
+  }
+  .res-empty h3{font-family:var(--font-display);font-weight:600;font-size:19px;color:var(--ink);margin-bottom:8px}
+  .res-empty p{font-size:13px;line-height:1.6;max-width:420px;margin:0 auto}
+
+  /* ---------- MINIMAP ---------- */
+  .minimap{
+    position:absolute;right:18px;bottom:18px;z-index:20;
+    width:190px;height:120px;background:#fff;border:1px solid var(--line);
+    border-radius:12px;box-shadow:var(--shadow-lg);padding:10px;
+  }
+  .minimap .mlabel{font-family:var(--font-mono);font-size:9.5px;color:var(--faint);letter-spacing:.1em;text-transform:uppercase;position:absolute;top:8px;left:11px}
+  .mm-svg{width:100%;height:100%}
+  .mm-node{fill:#fff;stroke:var(--edge-strong);stroke-width:1.4;rx:2}
+  .mm-edge{stroke:var(--edge);stroke-width:1.2;fill:none}
+
+  @keyframes pop{from{opacity:0;transform:translateY(10px) scale(.98)}to{opacity:1;transform:none}}
+
+  /* hide sidebar on small screens with a note */
+  .mobilenote{display:none}
+  @media(max-width:860px){
+    .app{grid-template-columns:1fr;grid-template-rows:56px auto 1fr;grid-template-areas:"brand" "topbar" "canvaswrap"}
+    .sidebar,.brand{display:none}
+    .topbar{grid-area:topbar}
+    .canvaswrap{grid-area:canvaswrap}
+    .searchtop{display:none}
+  }
+  @media (prefers-reduced-motion: reduce){
+    *{animation:none!important;transition:none!important}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- brand corner -->
+  <div class="brand">
+    <div class="mark">R</div>
+    <div class="wm"><b>Retention Navigator</b><span>DPDP Act 2023 · Rules 2025</span></div>
+  </div>
+
+  <!-- topbar -->
+  <div class="topbar">
+    <div class="tabs">
+      <button class="tab active" data-tab="flow"><span class="dot"></span>Scenario flow</button>
+      <button class="tab g2" data-tab="resolver"><span class="dot"></span>Interplay resolver</button>
+    </div>
+    <div class="spacer"></div>
+    <div class="searchtop">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input id="topsearch" placeholder="Search a section or rule…" />
+    </div>
+    <button class="iconbtn" id="resetBtn" title="Reset view">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>
+    </button>
+  </div>
+
+  <!-- sidebar / component box -->
+  <aside class="sidebar">
+    <div class="side-head">
+      <h2>Scenario box
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#9297C8" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg>
+      </h2>
+      <p>Pick who you are. The canvas draws the retention rule that binds you and every overlay that stacks on top.</p>
+    </div>
+    <div class="side-search">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input id="sidesearch" placeholder="Search scenarios…" />
+    </div>
+    <div class="scroll" id="sidelist"><!-- injected --></div>
+  </aside>
+
+  <!-- canvas -->
+  <div class="canvaswrap">
+    <div class="canvas-toolbar">
+      <button title="Run flow" id="tbRun"><svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></button>
+      <button title="Fit" id="tbFit"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="3"/></svg></button>
+      <div class="div"></div>
+      <button title="Zoom in" id="tbIn"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M11 8v6M8 11h6M20 20l-3.5-3.5"/></svg></button>
+      <button title="Zoom out" id="tbOut"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M8 11h6M20 20l-3.5-3.5"/></svg></button>
+    </div>
+
+    <div class="canvas" id="canvas">
+      <div class="stage" id="stage"><!-- flow OR resolver injected here --></div>
+    </div>
+
+    <div class="minimap">
+      <span class="mlabel">Map</span>
+      <svg class="mm-svg" viewBox="0 0 190 120" id="minimap"></svg>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   DATA — faithful to "Retention Obligations – Mapped"
+   ============================================================ */
+
+// geometric glyph generator (diamond / pentagon / hexagon like reference)
+function glyph(shape, color, size){
+  size = size || 26;
+  const c = color;
+  if(shape==='diamond')
+    return `<svg viewBox="0 0 32 32" width="${size}" height="${size}"><rect x="6" y="6" width="20" height="20" rx="4" transform="rotate(45 16 16)" fill="${c}22" stroke="${c}" stroke-width="2"/><rect x="12.5" y="12.5" width="7" height="7" rx="1.5" transform="rotate(45 16 16)" fill="${c}"/></svg>`;
+  if(shape==='pentagon')
+    return `<svg viewBox="0 0 32 32" width="${size}" height="${size}"><path d="M16 4l11 8-4.2 13H9.2L5 12z" fill="${c}22" stroke="${c}" stroke-width="2"/><circle cx="16" cy="16" r="3.6" fill="${c}"/></svg>`;
+  if(shape==='hexagon')
+    return `<svg viewBox="0 0 32 32" width="${size}" height="${size}"><path d="M16 3l11 6.3v13.4L16 29 5 22.7V9.3z" fill="${c}22" stroke="${c}" stroke-width="2"/><path d="M16 11l5 3v6l-5 3-5-3v-6z" fill="${c}"/></svg>`;
+  if(shape==='circle')
+    return `<svg viewBox="0 0 32 32" width="${size}" height="${size}"><circle cx="16" cy="16" r="12" fill="${c}22" stroke="${c}" stroke-width="2"/><circle cx="16" cy="16" r="4" fill="${c}"/></svg>`;
+  // square
+  return `<svg viewBox="0 0 32 32" width="${size}" height="${size}"><rect x="5" y="5" width="22" height="22" rx="5" fill="${c}22" stroke="${c}" stroke-width="2"/><rect x="12" y="12" width="8" height="8" rx="2" fill="${c}"/></svg>`;
+}
+
+const REGIME_COLORS = {
+  baseline:'var(--c-baseline)', request:'var(--c-request)', sectoral:'var(--c-sectoral)',
+  log:'var(--c-log)', consent:'var(--c-consent)', exempt:'var(--c-exempt)'
+};
+const HEX = { baseline:'#3B4CCA', request:'#C0483B', sectoral:'#E0A21B', log:'#2E9E6B', consent:'#7B49C4', exempt:'#4B5163' };
+
+/* Each scenario = one row of the source matrix, expressed as a node flow. */
+const SCENARIOS = [
+  {
+    id:'baseline', group:'DPDP baseline', kind:'baseline', shape:'diamond',
+    title:'All Data Fiduciaries', short:'The universal baseline rule',
+    source:'s. 8(7)(a) DPDP · s. 8(8)',
+    heading:'Every fiduciary, every purpose',
+    nodes:[
+      {kind:'baseline', shape:'diamond', title:'Applies to', tag:'scope', big:'All personal data', sub:'Held by any Data Fiduciary, across every purpose.'},
+      {kind:'request', shape:'pentagon', title:'Retain until', tag:'period', big:'Purpose ends', sub:'Consent withdrawal (s. 6(6)), purpose served, or dormancy deeming under s. 8(8).'},
+      {kind:'log', shape:'hexagon', title:'Trigger to erase', tag:'trigger', big:'Fresh consent', sub:'New purpose must be notified before further processing.'},
+      {kind:'exempt', shape:'square', title:'Erasure flows', tag:'note', big:'Down to processors', sub:'s. 8(7)(b) pushes erasure to Data Processors; s. 17 exemptions may apply.'},
+    ],
+    overlays:[],
+    apply:'13 May 2027'
+  },
+  {
+    id:'erasure-req', group:'DPDP baseline', kind:'request', shape:'pentagon',
+    title:'Erasure request received', short:'Data principal invokes s. 12',
+    source:'s. 12(3) DPDP + r. 14',
+    heading:'A principal asks you to erase',
+    nodes:[
+      {kind:'request', shape:'pentagon', title:'Applies to', tag:'scope', big:'PD of the requester', sub:'Personal data of the data principal who filed the request.'},
+      {kind:'request', shape:'pentagon', title:'Respond within', tag:'period', big:'≤ 90 days', sub:'Erasure on request; response due within ninety days.'},
+      {kind:'log', shape:'hexagon', title:'Trigger', tag:'trigger', big:'The request itself', sub:'Principal exercises the erasure right.'},
+      {kind:'exempt', shape:'square', title:'Refusable if', tag:'note', big:'Purpose subsists', sub:'May refuse where a specified purpose still subsists; disapplied for the State (s. 17(4)).'},
+    ],
+    overlays:[],
+    apply:'13 May 2027'
+  },
+  {
+    id:'ecommerce', group:'Notified classes (r. 8)', kind:'sectoral', shape:'hexagon',
+    title:'E-commerce (≥ 2 cr users)', short:'CPA 2019 defn · marketplace sellers excluded',
+    source:'r. 8(1) + Third Sch.',
+    heading:'E-commerce operator, ≥ 2 crore registered users in India',
+    nodes:[
+      {kind:'sectoral', shape:'hexagon', title:'Applies to', tag:'scope', big:'All PD', sub:'Except (a) user-account access data and (b) redeemable virtual tokens — wallets, points, gift credit.'},
+      {kind:'request', shape:'pentagon', title:'Ceiling', tag:'period', big:'3 years', sub:'From latest of: last approach for the purpose; last exercise of rights; commencement of the Rules.'},
+      {kind:'log', shape:'hexagon', title:'Trigger to erase', tag:'trigger', big:'Approach / rights', sub:'Any approach or rights-exercise resets the clock; post-notice logic defers erasure.'},
+      {kind:'exempt', shape:'square', title:'Notice duties', tag:'note', big:'48-hr + 1-yr tail', sub:'48-hour pre-erasure notice mandatory (r. 8(2)); r. 8(3) 1-yr tail survives erasure.'},
+    ],
+    overlays:[
+      {name:'PMLA / RBI KYC', per:'5 yrs', desc:'Transaction & identity records, from txn / relationship end.'},
+      {name:'CGST Act s.36', per:'72 months', desc:'From annual-return due date.'},
+      {name:'CERT-In', per:'180 days', desc:'ICT logs.'},
+      {name:'IT Rules 2021 r.3(1)(g)–(h)', per:'180 days', desc:'Post-deregistration.'},
+      {name:'Companies Act s.128(5)', per:'8 FYs', desc:'Books of account.'},
+      {name:'Income-tax r.6F', per:'6–10 yrs', desc:'Reassessment window.'},
+    ],
+    apply:'13 May 2027'
+  },
+  {
+    id:'gaming', group:'Notified classes (r. 8)', kind:'sectoral', shape:'hexagon',
+    title:'Online gaming (≥ 50 lakh users)', short:'Intermediary · lowest of the three thresholds',
+    source:'r. 8(1) + Third Sch.',
+    heading:'Online gaming intermediary, ≥ 50 lakh registered users in India',
+    nodes:[
+      {kind:'sectoral', shape:'hexagon', title:'Applies to', tag:'scope', big:'All PD', sub:'Token exception is wide: in-game currency & redeemable credits excluded.'},
+      {kind:'request', shape:'pentagon', title:'Ceiling', tag:'period', big:'3 years', sub:'Same latest-of-three clock as e-commerce.'},
+      {kind:'log', shape:'hexagon', title:'Trigger to erase', tag:'trigger', big:'Approach / rights', sub:'Clock resets on approach or rights-exercise.'},
+      {kind:'exempt', shape:'square', title:'Notice duties', tag:'note', big:'48-hr + 1-yr tail', sub:'Post-PROGA, an exiting RMG operator may fall below 50-lakh — baseline s. 8(7) then governs.'},
+    ],
+    overlays:[
+      {name:'Legacy RMG PMLA/KYC', per:'5 yrs', desc:'Wallet & transaction tails.'},
+      {name:'CGST', per:'72 months', desc:'28%-GST-era records.'},
+      {name:'CERT-In', per:'180 days', desc:'Logs; IT Rules concurrent.'},
+    ],
+    apply:'13 May 2027'
+  },
+  {
+    id:'social', group:'Notified classes (r. 8)', kind:'sectoral', shape:'hexagon',
+    title:'Social media (≥ 2 cr users)', short:'IT Rules 2021 r. 2(1)(w) · distinct from 50-lakh SSMI',
+    source:'r. 8(1) + Third Sch.',
+    heading:'Social-media intermediary, ≥ 2 crore registered users in India',
+    nodes:[
+      {kind:'sectoral', shape:'hexagon', title:'Applies to', tag:'scope', big:'Broad "user account"', sub:'Identity core preserved; content / behavioural / ad data purged. NB: distinct from the 50-lakh SSMI threshold.'},
+      {kind:'request', shape:'pentagon', title:'Ceiling', tag:'period', big:'3 years', sub:'Same latest-of-three clock.'},
+      {kind:'log', shape:'hexagon', title:'Trigger to erase', tag:'trigger', big:'Approach / rights', sub:'Clock resets on approach or rights-exercise.'},
+      {kind:'exempt', shape:'square', title:'Notice duties', tag:'note', big:'48-hr + 1-yr tail', sub:'Standard pre-erasure notice and surviving tail apply.'},
+    ],
+    overlays:[
+      {name:'IT Rules 2021 r.3(1)(g)–(h)', per:'180 days', desc:'Registration info after cancellation / withdrawal.'},
+      {name:'CERT-In', per:'180 days', desc:'Logs.'},
+      {name:'Telecom UL (if comms-licensed)', per:'2 yrs', desc:'CDR/EDR/IPDR (DoT amendment, 21 Dec 2021 — raised from 1 yr).'},
+    ],
+    apply:'13 May 2027'
+  },
+  {
+    id:'pre-erasure', group:'Procedural duties', kind:'log', shape:'circle',
+    title:'Pre-erasure notice', short:'The 48-hour procedural duty',
+    source:'r. 8(2)',
+    heading:'The 48-hour notice before you erase',
+    nodes:[
+      {kind:'log', shape:'circle', title:'Applies to', tag:'scope', big:'Procedural only', sub:'A duty, not a data class — the notice you owe before erasing.'},
+      {kind:'request', shape:'pentagon', title:'Window', tag:'period', big:'≥ 48 hrs', sub:'Notice must precede erasure by at least forty-eight hours.'},
+      {kind:'log', shape:'hexagon', title:'Trigger', tag:'trigger', big:'Approaching T₃', sub:'Fires as the 3-yr period (T₃) nears expiry; a fresh approach restarts the clock.'},
+      {kind:'exempt', shape:'square', title:'Condition', tag:'note', big:'Lawful erasure', sub:'A condition of lawful erasure, not a courtesy. Channel unspecified — registered email/SMS in practice.'},
+    ],
+    overlays:[],
+    apply:'13 May 2027'
+  },
+  {
+    id:'universal-floor', group:'Procedural duties', kind:'sectoral', shape:'hexagon',
+    title:'Universal 1-yr floor', short:'PD + traffic + logs · the tail that always runs',
+    source:'r. 8(3) + Seventh Sch.',
+    heading:'The 1-year floor beneath every erasure',
+    nodes:[
+      {kind:'sectoral', shape:'hexagon', title:'Applies to', tag:'scope', big:'PD + logs', sub:'The PD itself + associated traffic data + processing logs, for fiduciaries and their processors.'},
+      {kind:'request', shape:'pentagon', title:'Floor', tag:'period', big:'≥ 1 year', sub:'Per processing event — a rolling per-event clock, not a single account clock.'},
+      {kind:'log', shape:'hexagon', title:'Trigger', tag:'trigger', big:'Each event', sub:'Every processing event starts its own one-year floor.'},
+      {kind:'exempt', shape:'square', title:'Purpose', tag:'note', big:'State / security', sub:'Retained only for Seventh Schedule purposes — security, legal functions, SDF assessment; r. 23 gag on informing DP.'},
+    ],
+    overlays:[
+      {name:'CERT-In', per:'180 days', desc:'Logs run inside the 1-yr window.'},
+      {name:'Telecom UL', per:'2 yrs', desc:'Extends for licensed comms.'},
+      {name:'Aadhaar Auth Regs', per:'2 + 5 yrs', desc:'Auth logs + archive.'},
+    ],
+    apply:'13 May 2027'
+  },
+  {
+    id:'security-logs', group:'Procedural duties', kind:'log', shape:'pentagon',
+    title:'Security logs', short:'Breach detection, investigation, remediation',
+    source:'r. 6(1)(e)',
+    heading:'Security logs for breach defence',
+    nodes:[
+      {kind:'log', shape:'pentagon', title:'Applies to', tag:'scope', big:'Logs + PD', sub:'For breach detection, investigation and remediation.'},
+      {kind:'request', shape:'pentagon', title:'Period', tag:'period', big:'1 year', sub:'Per log / processing event.'},
+      {kind:'log', shape:'hexagon', title:'Trigger', tag:'trigger', big:'Each event', sub:'Runs concurrently with r. 8(3); may be lengthened or shortened by other law.'},
+      {kind:'exempt', shape:'square', title:'Penalty track', tag:'note', big:'₹250 cr ceiling', sub:'Breach = security-safeguards failure → ₹250 cr ceiling (vs ₹50 cr residual for r. 8 failures).'},
+    ],
+    overlays:[
+      {name:'CERT-In', per:'180 days', desc:'Rule runs concurrently.'},
+    ],
+    apply:'13 May 2027'
+  },
+  {
+    id:'consent-manager', group:'Specialised holders', kind:'consent', shape:'hexagon',
+    title:'Consent Managers', short:'Registered CMs · content-blind records',
+    source:'First Sch. Pt B, Items 3–4',
+    heading:'Registered Consent Manager',
+    nodes:[
+      {kind:'consent', shape:'hexagon', title:'Applies to', tag:'scope', big:'Consent records', sub:'Consents given / denied / withdrawn, notices, data-sharing logs — NOT the underlying PD (content-blind).'},
+      {kind:'consent', shape:'pentagon', title:'Period', tag:'period', big:'≥ 7 years', sub:'Per record entry.'},
+      {kind:'log', shape:'hexagon', title:'Trigger', tag:'trigger', big:'Each record', sub:'Extendable by DP–CM agreement or by law.'},
+      {kind:'exempt', shape:'square', title:'Purpose', tag:'note', big:'Evidentiary layer', sub:'For s. 6(10) burden of proof; DP access in machine-readable form.'},
+    ],
+    overlays:[],
+    apply:'26 Nov 2026'
+  },
+  {
+    id:'state-research', group:'Exempt & State', kind:'exempt', shape:'square',
+    title:'State / research processing', short:'s. 7(b), r. 5 · research, archiving, statistics',
+    source:'Second Sch. std (e) · s. 17(2)(b), r. 16',
+    heading:'State instrumentalities · research · archiving',
+    nodes:[
+      {kind:'exempt', shape:'square', title:'Applies to', tag:'scope', big:'PD under s. 7(b)', sub:'State instrumentalities (s. 7(b)/r. 5); research, archiving, statistics (s. 17(2)(b)/r. 16).'},
+      {kind:'request', shape:'pentagon', title:'Period', tag:'period', big:'"Till required"', sub:'Necessity for the use/purpose — no hard time-line.'},
+      {kind:'log', shape:'hexagon', title:'Trigger', tag:'trigger', big:'Necessity ends', sub:'Retention lawful only while necessity subsists.'},
+      {kind:'exempt', shape:'square', title:'Note', tag:'note', big:'ss. 8(7) & 12(3) off', sub:'Disapplied for ALL State processing — indefinite retention lawful. Public Records Act 1993 schedules apply independently.'},
+    ],
+    overlays:[
+      {name:'Public Records Act 1993', per:'—', desc:'Record-retention schedules apply independently.'},
+    ],
+    apply:'13 May 2027'
+  },
+  {
+    id:'exempt-processing', group:'Exempt & State', kind:'exempt', shape:'square',
+    title:'Exempt processing (s. 17)', short:'Legal claims · courts · investigation · startups',
+    source:'s. 17(1), (3)',
+    heading:'Exempt processing under s. 17',
+    nodes:[
+      {kind:'exempt', shape:'square', title:'Applies to', tag:'scope', big:'PD for exempt purpose', sub:'Legal claims; courts; investigation/prosecution; loan-default assessment; mergers/schemes; notified startups (s. 17(3)).'},
+      {kind:'request', shape:'pentagon', title:'Period', tag:'period', big:'No DPDP time-line', sub:'Governed by the exempt purpose, not DPDP.'},
+      {kind:'log', shape:'hexagon', title:'Trigger', tag:'trigger', big:'—', sub:'Sectoral / limitation law supplies the clock.'},
+      {kind:'exempt', shape:'square', title:'Note', tag:'note', big:'Startups: s.12 survives', sub:'In force with Act provisions. For notified startups s. 8(7) disapplied, but s. 12 rights + r. 8(3) floor arguably survive.'},
+    ],
+    overlays:[
+      {name:'Limitation Act 1963', per:'3 yrs', desc:'Contract claims.'},
+      {name:'BNSS / CrPC', per:'—', desc:'Preservation; IBC; RBI directions.'},
+      {name:'CICRA 2005', per:'per CIC regs', desc:'Credit information.'},
+    ],
+    apply:'In force with Act'
+  },
+];
+
+/* Interplay regimes A–G and their pairings (from the Interplay Mapping table) */
+const REGIMES = {
+  A:{name:'Consent withdrawal / erasure', sub:'ss. 6(6), 12(3)', kind:'request'},
+  B:{name:'Third Schedule ceiling', sub:'3-yr + 48-hr notice, rr. 8(1)–(2)', kind:'sectoral'},
+  C:{name:'Universal 1-yr floor', sub:'PD + traffic + logs, r. 8(3)', kind:'sectoral'},
+  D:{name:'Security-log retention', sub:'1 yr, r. 6(1)(e)', kind:'log'},
+  E:{name:'Sectoral mandate', sub:'PMLA / KYC / CGST / telecom / CERT-In / IT Rules', kind:'sectoral'},
+  F:{name:'Consent Manager records', sub:'7-yr, First Sch. Pt B', kind:'consent'},
+  G:{name:'State / s. 17 exemptions', sub:'exempt & State processing', kind:'exempt'},
+};
+
+const PAIRS = {
+  'A|B':{rule:'DPDP — the request', governs:'Erasure beats the ceiling',
+    text:'An erasure request or consent withdrawal <b>beats the 3-yr ceiling</b>: the ceiling is a maximum, not a minimum, so the fiduciary erases early rather than waiting out the dormancy window.'},
+  'A|C':{rule:'DPDP — the floor survives', governs:'The 1-yr tail still runs',
+    text:'The 1-yr r. 8(3) tail runs despite the request — better view: r. 8(3) is itself "retention required by law" within the s. 8(7)/12(3) carve-outs. For one year, <b>"deletion" means de-activation plus restricted retention</b> — say so in the privacy notice.'},
+  'A|D':{rule:'DPDP — logs survive', governs:'Logs complete their term',
+    text:'Security logs complete their <b>1-yr term notwithstanding the request</b>; they are held for breach defence, not for the withdrawn purpose.'},
+  'A|E':{rule:'Sectoral law', governs:'The sectoral period prevails',
+    text:'The sectoral period prevails for covered elements (e.g. KYC core, 5 yrs). <b>Document the legal basis per data element</b>, and erase when the sectoral period expires — the DPDP machinery reactivates at that point.'},
+  'A|F':{rule:'Both — parallel', governs:'Two data corpora, never touching',
+    text:'The CM retains a <b>7-yr record of the withdrawal itself</b>; the fiduciary erases the underlying PD. The two obligations never touch the same data.'},
+  'A|G':{rule:'Other law', governs:'Exempt processing may refuse',
+    text:'Exempt processing (legal claims, investigation, loan-default assessment) <b>may refuse the request</b>; for State processing, s. 17(4) disapplies the erasure right altogether.'},
+  'B|C':{rule:'Both — sequential', governs:'Erase at T₃, then run the tail',
+    text:'Erase at <b>T₃ under the Third Schedule</b>, then the erased corpus\' data and logs run one further year under r. 8(3) for Seventh Schedule purposes.'},
+  'B|D':{rule:'Both — concurrent', governs:'Independent clocks',
+    text:'Security logs run on their own <b>per-event 1-yr clock</b>, indifferent to the account-level 3-yr dormancy clock.'},
+  'B|E':{rule:'Element-wise split', governs:'One account, three clocks',
+    text:'Within one dormant account: KYC/transaction core → 5 yrs (PMLA/RBI); GST-relevant → 72 months; behavioural/content/ad data → the 3-yr ceiling. <b>Retention schedules must run at data-element granularity, not account granularity.</b>'},
+  'B|F':{rule:'Independent', governs:'Separate holders',
+    text:'The fiduciary holds the PD on the 3-yr clock; the CM holds only <b>consent metadata on its 7-yr clock</b>.'},
+  'B|G':{rule:'Other law', governs:'Ceiling binds only the three classes',
+    text:'Exempt classes and State fiduciaries sit outside the ceiling altogether; <b>the ceiling binds only the three notified private classes</b>.'},
+  'C|D':{rule:'Both — concurrent', governs:'One policy, two penalty tracks',
+    text:'Operationalise as a single log-retention policy but map them separately: <b>two legal bases, two penalty tracks</b> — r. 6 failure → ₹250 cr security ceiling; r. 8 failure → ₹50 cr residual.'},
+  'C|E':{rule:'Sectoral extends', governs:'Sector law lengthens the floor',
+    text:'CERT-In\'s 180-day rule runs <b>inside</b> the 1-yr window; telecom UL (2 yrs), Aadhaar auth logs (2 + 5 yrs) and PMLA (5 yrs) <b>extend it</b> for their elements.'},
+  'C|F':{rule:'Independent', governs:'Different corpora',
+    text:'Different holders, different corpora — no interaction.'},
+  'C|G':{rule:'DPDP — floor arguably survives', governs:'Startups still bound by the floor',
+    text:'s. 17(3) startup notifications disapply s. 8(7), but r. 8(3) is a <b>free-standing rule-level duty</b> — the 1-yr floor arguably still binds notified startups.'},
+  'D|E':{rule:'Both — concurrent', governs:'Longer DPDP term governs',
+    text:'The CERT-In 180-day log mandate is satisfied <b>inside</b> the DPDP 1-yr security-log term; the longer DPDP term governs the end date.'},
+  'D|G':{rule:'DPDP — duty survives', governs:'Exempt processors still keep logs',
+    text:'s. 8(5) (security safeguards) is expressly <b>NOT exempted</b> under s. 17(1) — exempt processors still keep security logs.'},
+  'E|G':{rule:'Other law', governs:'Sectoral law governs both',
+    text:'Where processing is exempt <b>and</b> sectorally mandated, the underlying sectoral law governs both the retention and its duration.'},
+  'F|*':{rule:'Independent', governs:'A parallel evidentiary layer',
+    text:'CM records are a <b>parallel evidentiary layer</b>; no other regime shortens or extends the 7-yr term.'},
+};
+
+/* ============================================================
+   RENDER
+   ============================================================ */
+const stage = document.getElementById('stage');
+const sidelist = document.getElementById('sidelist');
+let currentTab = 'flow';
+let currentScenario = null;
+let selectedRegimes = [];
+
+/* --- sidebar groups --- */
+function buildSidebar(filter){
+  filter = (filter||'').toLowerCase();
+  const groups = {};
+  SCENARIOS.forEach(s=>{ (groups[s.group] ||= []).push(s); });
+  sidelist.innerHTML = '';
+  Object.entries(groups).forEach(([gname, items])=>{
+    const matched = items.filter(s=> !filter || (s.title+s.short+s.source).toLowerCase().includes(filter));
+    if(!matched.length) return;
+    const g = document.createElement('div');
+    g.className='group';
+    g.innerHTML = `<div class="group-label">${gname}
+      <svg class="chev" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="m6 9 6 6 6-6"/></svg></div>
+      <div class="items"></div>`;
+    const itemsWrap = g.querySelector('.items');
+    matched.forEach(s=>{
+      const el = document.createElement('div');
+      el.className='node-item'+(currentScenario===s.id?' active':'');
+      el.dataset.id=s.id;
+      el.innerHTML = `
+        <span class="glyph">${glyph(s.shape, HEX[s.kind])}</span>
+        <span class="lbl"><b>${s.title}</b><span>${s.short}</span></span>
+        <svg class="star" width="14" height="14" viewBox="0 0 24 24" fill="${currentScenario===s.id?'currentColor':'none'}" stroke="currentColor" stroke-width="1.8"><path d="M12 2l2.9 6.3 6.9.7-5.2 4.6 1.5 6.8L12 17.7 5.9 20.4l1.5-6.8L2.2 9l6.9-.7z"/></svg>`;
+      el.onclick=()=>{ selectScenario(s.id); };
+      itemsWrap.appendChild(el);
+    });
+    g.querySelector('.group-label').onclick=(e)=>{ if(e.target.closest('.chev')||true) g.classList.toggle('collapsed'); };
+    sidelist.appendChild(g);
+  });
+}
+
+/* --- draw a single scenario flow --- */
+function renderFlow(){
+  const s = SCENARIOS.find(x=>x.id===currentScenario);
+  if(!s){
+    stage.innerHTML = `
+      <div class="empty-flow">
+        <div class="ico">${glyph('diamond','#3B4CCA',64)}</div>
+        <h3>Pick a scenario to begin</h3>
+        <p>Choose who you are from the scenario box on the left. The canvas will draw the retention rule that binds you, the trigger that starts the clock, and every sectoral overlay that stacks on top.</p>
+      </div>`;
+    drawMinimap([]);
+    return;
+  }
+  const cards = s.nodes.map((n,i)=>`
+    <div class="ncard" style="--acc:${HEX[n.kind]};animation-delay:${i*70}ms">
+      <span class="port in"></span>
+      <div class="nhead">
+        <span class="g">${glyph(n.shape, HEX[n.kind], 30)}</span>
+        <div class="t"><b>${n.title}</b><span>${n.tag}</span></div>
+      </div>
+      <div class="nbody">
+        <span class="big">${n.big}</span>
+        <span class="sub">${n.sub}</span>
+      </div>
+      <span class="port out"></span>
+    </div>`).join('');
+
+  let overlayPanel = '';
+  if(s.overlays.length){
+    overlayPanel = `
+      <div class="panel" style="animation-delay:.28s">
+        <div class="phead">
+          <span class="g">${glyph('hexagon', HEX.sectoral, 26)}</span>
+          <b>Sectoral overlay</b>
+          <span class="tag">stacks on top — longest wins per element</span>
+        </div>
+        <div class="pbody">
+          ${s.overlays.map(o=>`<div class="ovl"><span class="name">${o.name}</span><span class="per">${o.per}</span><span class="desc">${o.desc}</span></div>`).join('')}
+        </div>
+      </div>`;
+  } else {
+    overlayPanel = `
+      <div class="panel" style="animation-delay:.28s">
+        <div class="phead"><span class="g">${glyph('circle', HEX.baseline, 26)}</span><b>Sectoral overlay</b><span class="tag">none mapped</span></div>
+        <div class="pbody"><div class="ovl"><span class="desc" style="max-width:none;text-align:left;margin:0">No sectoral retention law stacks on this scenario. The DPDP clock governs alone.</span></div></div>
+      </div>`;
+  }
+
+  const nextSteps = `
+    <div class="panel" style="animation-delay:.34s">
+      <div class="phead"><span class="g">${glyph('pentagon', HEX.request, 26)}</span><b>How the clock resolves</b><span class="tag">jump to resolver →</span></div>
+      <div class="pbody">
+        <div class="ovl"><span class="name">In force</span><span class="per">${s.apply}</span><span class="desc">When this obligation starts to bind.</span></div>
+        <div class="ovl" style="cursor:pointer" onclick="goResolver()"><span class="name">Conflicts?</span><span class="per" style="color:var(--edge-strong)">Resolver</span><span class="desc">If an erasure request, sectoral mandate or log duty collides here, open the Interplay resolver.</span></div>
+      </div>
+    </div>`;
+
+  stage.innerHTML = `
+    <div class="flow-head">
+      <span class="kicker">${glyph(s.shape, HEX[s.kind], 16)} ${s.group}</span>
+      <h1>${s.heading}</h1>
+      <div class="cite">${s.source}</div>
+    </div>
+    <div class="flow-canvas">
+      <svg class="edges" id="edges"></svg>
+      <div class="flow-row" id="flowrow">${cards}</div>
+    </div>
+    <div class="sectorwrap">${overlayPanel}${nextSteps}</div>
+  `;
+  requestAnimationFrame(()=>{ drawEdges(); drawMinimap(s.nodes); });
+}
+
+/* connectors between the flow cards */
+function drawEdges(){
+  const svg = document.getElementById('edges');
+  const row = document.getElementById('flowrow');
+  if(!svg||!row) return;
+  const cards = [...row.querySelectorAll('.ncard')];
+  const rowBox = row.getBoundingClientRect();
+  svg.setAttribute('viewBox',`0 0 ${row.offsetWidth} ${row.offsetHeight}`);
+  svg.style.width = row.offsetWidth+'px';
+  svg.style.height = row.offsetHeight+'px';
+  let paths='';
+  for(let i=0;i<cards.length-1;i++){
+    const a=cards[i].getBoundingClientRect(), b=cards[i+1].getBoundingClientRect();
+    // only connect cards on the same visual row
+    if(Math.abs(a.top-b.top)>20) continue;
+    const x1=a.right-rowBox.left, y1=a.top+a.height/2-rowBox.top;
+    const x2=b.left-rowBox.left, y2=b.top+b.height/2-rowBox.top;
+    const mx=(x1+x2)/2;
+    paths+=`<path d="M${x1} ${y1} C ${mx} ${y1}, ${mx} ${y2}, ${x2} ${y2}"/>`;
+  }
+  svg.innerHTML=paths;
+}
+
+function drawMinimap(nodes){
+  const mm=document.getElementById('minimap');
+  if(!nodes.length){ mm.innerHTML=''; return; }
+  let s='';
+  const n=nodes.length, pad=20, w=190, gap=(w-pad*2)/(n-1||1), y=60;
+  for(let i=0;i<n;i++){
+    const x=pad+gap*i;
+    if(i<n-1) s+=`<path class="mm-edge" d="M${x+9} ${y} H${pad+gap*(i+1)-9}"/>`;
+  }
+  for(let i=0;i<n;i++){
+    const x=pad+gap*i;
+    s+=`<rect class="mm-node" x="${x-9}" y="${y-7}" width="18" height="14" rx="2" fill="${HEX[nodes[i].kind]}22" stroke="${HEX[nodes[i].kind]}"/>`;
+  }
+  mm.innerHTML=s;
+}
+
+function selectScenario(id){
+  currentScenario=id;
+  if(currentTab!=='flow') switchTab('flow');
+  buildSidebar(document.getElementById('sidesearch').value);
+  renderFlow();
+  document.getElementById('canvas').scrollTo({top:0,left:0,behavior:'smooth'});
+}
+
+/* ============================================================
+   INTERPLAY RESOLVER (tab 2)
+   ============================================================ */
+function renderResolver(){
+  const chips = Object.entries(REGIMES).map(([k,r])=>`
+    <button class="rchip ${selectedRegimes.includes(k)?'sel':''}" data-k="${k}" style="--acc:${HEX[r.kind]}">
+      <span class="k">${k}</span>
+      <span class="rt"><b>${r.name}</b><span>${r.sub}</span></span>
+    </button>`).join('');
+
+  let verdict='';
+  if(selectedRegimes.length===2){
+    const p = lookupPair(selectedRegimes[0], selectedRegimes[1]);
+    const [a,b]=selectedRegimes;
+    if(p){
+      verdict=`
+      <div class="verdict">
+        <div class="vhead">
+          <div class="vpair">
+            <span class="k" style="background:${HEX[REGIMES[a].kind]}">${a}</span>
+            <span class="x">×</span>
+            <span class="k" style="background:${HEX[REGIMES[b].kind]}">${b}</span>
+          </div>
+          <span class="rule">${p.rule}</span>
+        </div>
+        <div class="vbody">
+          <div class="governs">What governs · ${p.governs}</div>
+          <div class="practice">${p.text}</div>
+        </div>
+      </div>`;
+    }
+  } else {
+    verdict=`
+      <div class="res-empty">
+        <h3>${selectedRegimes.length===1?'Pick one more regime':'Pick any two regimes'}</h3>
+        <p>${selectedRegimes.length===1?'Choose a second card to see how the two obligations resolve against each other.':'Select two of the seven retention regimes above. The resolver tells you which one governs, and exactly how they interact in practice.'}</p>
+      </div>`;
+  }
+
+  stage.innerHTML=`
+    <div class="resolver">
+      <div class="res-head">
+        <span class="kicker">Interplay mapping · A–G</span>
+        <h1>When two clocks collide</h1>
+        <p>Two retention duties rarely cancel — one governs, or they run in parallel. Pick the two regimes in play and read the resolution.</p>
+      </div>
+      <div class="chip-rail">${chips}</div>
+      <div class="res-note">${selectedRegimes.length? 'Selected: '+selectedRegimes.join(' × ') : 'F pairs independently with every other regime.'}</div>
+      ${verdict}
+    </div>`;
+
+  stage.querySelectorAll('.rchip').forEach(c=>{
+    c.onclick=()=>{
+      const k=c.dataset.k;
+      if(selectedRegimes.includes(k)) selectedRegimes=selectedRegimes.filter(x=>x!==k);
+      else { selectedRegimes.push(k); if(selectedRegimes.length>2) selectedRegimes.shift(); }
+      renderResolver();
+    };
+  });
+  drawMinimap([]);
+  document.getElementById('minimap').innerHTML='';
+}
+
+function lookupPair(a,b){
+  if(a==='F'||b==='F'){
+    const other=a==='F'?b:a;
+    const direct=PAIRS[[a,b].sort().join('|')];
+    if(direct) return direct;
+    return PAIRS['F|*'];
+  }
+  return PAIRS[[a,b].sort().join('|')] || null;
+}
+
+window.goResolver=function(){ switchTab('resolver'); };
+
+/* ============================================================
+   TABS + CONTROLS
+   ============================================================ */
+function switchTab(tab){
+  currentTab=tab;
+  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active', t.dataset.tab===tab));
+  if(tab==='flow') renderFlow(); else renderResolver();
+  document.getElementById('canvas').scrollTo({top:0,left:0});
+}
+document.querySelectorAll('.tab').forEach(t=> t.onclick=()=>switchTab(t.dataset.tab));
+
+document.getElementById('sidesearch').addEventListener('input', e=> buildSidebar(e.target.value));
+document.getElementById('topsearch').addEventListener('input', e=>{
+  const v=e.target.value.toLowerCase();
+  document.getElementById('sidesearch').value=e.target.value;
+  buildSidebar(v);
+  const hit=SCENARIOS.find(s=>(s.title+s.short+s.source+s.heading).toLowerCase().includes(v));
+  if(v.length>2 && hit) selectScenario(hit.id);
+});
+
+document.getElementById('resetBtn').onclick=()=>{
+  currentScenario=null; selectedRegimes=[];
+  document.getElementById('sidesearch').value=''; document.getElementById('topsearch').value='';
+  buildSidebar(''); switchTab('flow');
+};
+
+/* zoom via CSS scale on stage */
+let zoom=1;
+function applyZoom(){ stage.style.transform=`scale(${zoom})`; stage.style.transformOrigin='top center'; }
+document.getElementById('tbIn').onclick=()=>{ zoom=Math.min(1.4,zoom+0.1); applyZoom(); };
+document.getElementById('tbOut').onclick=()=>{ zoom=Math.max(0.6,zoom-0.1); applyZoom(); };
+document.getElementById('tbFit').onclick=()=>{ zoom=1; applyZoom(); };
+document.getElementById('tbRun').onclick=()=>{ if(currentTab==='flow') renderFlow(); else renderResolver(); };
+
+window.addEventListener('resize', ()=>{ if(currentTab==='flow'&&currentScenario) drawEdges(); });
+
+/* init */
+buildSidebar('');
+renderFlow();
+</script>
+</body>
+</html>
